@@ -1,123 +1,107 @@
 let cl = console.log;
-const postinfo = document.getElementById('postInfo');
+
 const postForm = document.getElementById('postForm');
 const title = document.getElementById('title');
 const info = document.getElementById('info');
-const submitBtn = document.getElementById('submitBtn');
+const cardPost = document.getElementById('cardPost');
+const addPostBtn = document.getElementById('addPostBtn');
 const updateBtn = document.getElementById('updateBtn');
 
+let baseUrl = 'http://localhost:3000/posts';
+let token = "nagesh";
+localStorage.setItem('tokenV', token);
 
-let baseUrl = `https://jsonplaceholder.typicode.com/posts`;
-let postArray = []
 
+const onedithandler = (e) => {
+    let getEditId = e.dataset.id;
+    localStorage.setItem('setEditId', getEditId)
+    let getediturl =`${baseUrl}/${getEditId}`
+    makeAPICall(getediturl, 'GET')
+        .then(data => {
+            title.value = data.title;
+            info.value = data.info
+        })
+        .catch(cl)
+        addPostBtn.classList.add('d-none')
+        updateBtn.classList.remove('d-none')
 
-function makeNetworkCall(methodName, url, body){
-    return new Promise((resolve, reject) => {
-        let xhr = new XMLHttpRequest() ;
-
-xhr.open(methodName, url);
-
-xhr.onload = function(){
-    if(xhr.status === 200 || xhr.status === 201){
-        resolve(xhr.response)
-    }else{
-        reject('something went wrong')
-    }
-}
- xhr.send(body)
-    })
-    
 }
 
-makeNetworkCall('GET',baseUrl)
-    .then(res => {
-        postArray = JSON.parse(res)
-        templating(postArray);
-    })
-    .catch(cl);
-
-    const onEditHandler = (ele) => {
-        let getId = +ele.dataset.id;
-        cl(getId)
-        localStorage.setItem('setUpdatedId', getId);
-        let getObj = postArray.find(e => (e.id === getId))
-                title.value = getObj.title;
-                info.value = getObj.body;
-                updateBtn.classList.remove('d-none')
-                submitBtn.classList.add('d-none')
-                
-
-
-
- }
-
- function onUpdateHandler(event){
-       let getId = +(localStorage.getItem('setUpdatedId'));
-       cl(getId)
-       postArray.forEach(obj => {
-        if(obj.id === getId){
-            obj.title = title.value;
-            obj.body = info.value;
-        }
-       })
-       templating(postArray);
-       let updatedObj = {
-        title : title.value,
-        body : info.value
-       }
-       let updateUrl = `${baseUrl}/${getId}`;
-       makeNetworkCall('PATCH',updateUrl, updatedObj);
-       postForm.reset();
-       updateBtn.classList.add('d-none')
-       submitBtn.classList.remove('d-none')
-
- }
-
-function onDeleteHandler(ele){
-    let getDeleteId = +ele.dataset.id;
-    let deleteUrl = `${baseUrl}/${getDeleteId}`;
-    makeNetworkCall('DELETE', deleteUrl)
-    postArray = postArray.filter(post => post.id != getDeleteId)
-    templating(postArray)
+const onDeletehandler = (e) => {
+    let deleteId = e.dataset.id;
+    let deleteUrl = `${baseUrl}/${deleteId}`;
+    makeAPICall(deleteUrl, 'DELETE')
+       .then(cl)
+       .catch(cl)
 }
 
-function templating (arr) {
+const tamplating = (arr) => {
     result = '';
-    arr.forEach((ele) => {
+    arr.forEach(ele => {
         result += `
-                   <tr>
-                     <td>${ele.id}</td>
-                     <td>${ele.userId}</td>
-                     <td>${ele.title}</td>
-                     <td>${ele.body}</td>
-                     <td><button class="btn btn-info" data-id ="${ele.id}" onclick = 'onEditHandler(this)' >Edit</button></td>
-                     <td><button class="btn btn-danger" data-id ="${ele.id}" onclick = 'onDeleteHandler(this)' >Delete</button></td>
-                   </tr>`
+        <div class="col-md-4 offset-md-3 mt-4">
+           <div class="card">
+           <div class="card-body">
+           <h3>${ele.title}</h3>
+           <p>${ele.info}</p>
+           <p class="text-right mt-2">
+             <button class="btn btn-info" data-id="${ele.id}" onclick="onedithandler(this)">Edit</button>
+             <button class="btn btn-danger" data-id="${ele.id}" onclick="onDeletehandler(this)">Delete</button>
+           </p>
+        </div>
+    </div>
+        </div>  
+            `
     })
-  postinfo.innerHTML= result;
+    cardPost.innerHTML = result;
 }
 
+function makeAPICall(url, methodName, objbody) {
+   return fetch(url, {
+        method : methodName,
+        body : objbody,
+        headers : {
+            "content-type" : "application/json; charset=UTF-8",
+            "autherazation" : localStorage.getItem('tokenV')
+        }
+    }).then(res => res.json())
+}
 
-postForm.addEventListener('submit', onSubmitHandler)
-updateBtn.addEventListener('click', onUpdateHandler)
+makeAPICall(baseUrl, 'GET')
+   .then(data => tamplating(data))
+   .catch(cl)
 
 
-function onSubmitHandler(eve){
-      eve.preventDefault();
-      cl('triggered');
-      let obj = {
+
+
+
+
+
+
+const onformSubmit = (e) => {
+    e.preventDefault();
+    let obj = {
         title : title.value,
-        body : info.value,
-        userId : Math.floor(Math.random() * 10 ) + 1  
-      }
-      makeNetworkCall('POST', baseUrl, JSON.stringify(obj))
-         .then(res => {
-            obj.id = JSON.parse(res).id;
-            postArray.push(obj)
-            templating(postArray)
-         })
-         .catch(cl)
-      eve.target.reset()
+        info : info.value,
+        userId : Math.ceil(Math.random() * 10)
+    }
+    cl(obj)
+    makeAPICall(baseUrl, 'POST', JSON.stringify(obj))
+       .then(cl)
+       .catch(cl)
+    e.target.reset();
+}
+
+const onPostUpdate = () => {
+    let updateId = localStorage.getItem('setEditId');
+    let updatedUrl = `${baseUrl}/${updateId}`
+    let obj = {
+        title: title.value,
+        info: info.value
+    }
+    makeAPICall(updatedUrl, 'PATCH', JSON.stringify(obj))
+        .then(cl)
+        .catch(cl)
 }
 
 
@@ -125,9 +109,5 @@ function onSubmitHandler(eve){
 
 
 
-
-
-
-
-
-
+postForm.addEventListener('submit', onformSubmit);
+updateBtn.addEventListener('click', onPostUpdate);
