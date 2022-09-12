@@ -102,6 +102,9 @@ const onPostUpdate = () => {
     makeAPICall(updatedUrl, 'PATCH', JSON.stringify(obj))
         .then(cl)
         .catch(cl)
+
+        addPostBtn.classList.remove('d-none')
+        updateBtn.classList.add('d-none')
 }
 
 
